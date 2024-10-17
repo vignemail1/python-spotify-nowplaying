@@ -3,9 +3,10 @@
 
 import os
 import sys
+import json
 import logging
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
@@ -19,17 +20,48 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+# Fonction pour charger les informations du token
+def load_token_info():
+    token_file = os.path.join(os.path.dirname(__file__), 'token_info.json')
+    if os.path.exists(token_file):
+        with open(token_file, 'r') as f:
+            return json.load(f)
+    return None
+
+# Fonction pour sauvegarder les informations du token
+def save_token_info(token_info):
+    token_file = os.path.join(os.path.dirname(__file__), 'token_info.json')
+    with open(token_file, 'w') as f:
+        json.dump(token_info, f)
+
+# Fonction pour vérifier si le token est expiré
+def is_token_expired(token_info):
+    now = datetime.now()
+    return now > datetime.fromisoformat(token_info['expires_at'])
+
+# Fonction pour obtenir un client Spotify avec un token valide
 def get_spotify_client():
-    try:
-        load_dotenv(dotenv_path='env.txt')
-        return spotipy.Spotify(auth_manager=SpotifyOAuth(
-            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-            redirect_uri="http://localhost:8888/callback",
-            scope="user-read-currently-playing user-read-playback-state user-modify-playback-state"
-        ))
-    except Exception as e:
-        logging.error(f"Erreur lors de l'initialisation du client Spotify : {str(e)}")
+    load_dotenv(dotenv_path='env.txt')
+    sp_oauth = SpotifyOAuth(
+        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+        redirect_uri="http://localhost:8888/callback",
+        scope="user-read-currently-playing user-read-playback-state user-modify-playback-state"
+    )
+    
+    token_info = sp_oauth.get_cached_token()
+    
+    if not token_info:
+        auth_url = sp_oauth.get_authorize_url()
+        print(f'Please visit this URL to authorize the application: {auth_url}')
+        response = input('Enter the URL you were redirected to: ')
+        code = sp_oauth.parse_response_code(response)
+        token_info = sp_oauth.get_access_token(code)
+    
+    if token_info:
+        return spotipy.Spotify(auth=token_info['access_token'])
+    else:
+        logging.error("Impossible d'obtenir le token")
         return None
 
 def get_current_track(sp):
@@ -79,16 +111,17 @@ def resume_playback(sp):
         return None
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Contrôle de Spotify", epilog='⭐️ : compte premium nécessaire')
+    parser = argparse.ArgumentParser(description="Contrôle de Spotify")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--next', action='store_true', help='(⭐️) Passer à la piste suivante')
-    group.add_argument('--previous', action='store_true', help='(⭐️) Revenir à la piste précédente')
-    group.add_argument('--pause', action='store_true', help='(⭐️) Mettre en pause la lecture')
-    group.add_argument('--play', action='store_true', help='(⭐️) Relancer la lecture')
+    group.add_argument('--next', action='store_true', help='Passer à la piste suivante')
+    group.add_argument('--previous', action='store_true', help='Revenir à la piste précédente')
+    group.add_argument('--pause', action='store_true', help='Mettre en pause la lecture')
+    group.add_argument('--play', action='store_true', help='Relancer la lecture')
     args = parser.parse_args()
 
     sp = get_spotify_client()
     if sp is None:
+        print("Erreur lors de l'initialisation du client Spotify. Vérifiez le fichier de log pour plus de détails.")
         sys.exit(1)
 
     result = None
