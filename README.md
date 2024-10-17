@@ -66,3 +66,9 @@ options:
   --pause     Mettre en pause la lecture
   --play      Relancer la lecture
 ```
+
+- Pour obtenir la piste en cours : `pipenv run spotify_track`
+- Pour passer à la piste suivante : `pipenv run spotify_track --next`
+- Pour revenir à la piste précédente : `pipenv run spotify_track --previous`
+- Pour mettre en pause la lecture : `pipenv run spotify_track --pause`
+- Pour relancer la lecture : `pipenv run spotify_track --play`
