@@ -4,6 +4,7 @@
 import os
 import sys
 import logging
+import argparse
 from datetime import datetime
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -18,40 +19,90 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-def get_current_track():
+def get_spotify_client():
     try:
-        # Chargement des variables d'environnement depuis env.txt
         load_dotenv(dotenv_path='env.txt')
-
-        # Configuration de l'authentification Spotify
-        sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+        return spotipy.Spotify(auth_manager=SpotifyOAuth(
             client_id=os.getenv("SPOTIFY_CLIENT_ID"),
             client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
             redirect_uri="http://localhost:8888/callback",
-            scope="user-read-currently-playing"
+            scope="user-read-currently-playing user-read-playback-state user-modify-playback-state"
         ))
+    except Exception as e:
+        logging.error(f"Erreur lors de l'initialisation du client Spotify : {str(e)}")
+        return None
 
-        # Récupération des informations sur la piste en cours
+def get_current_track(sp):
+    try:
         current_track = sp.current_user_playing_track()
         if current_track is not None and current_track['is_playing']:
             artist = current_track['item']['artists'][0]['name']
             title = current_track['item']['name']
             album = current_track['item']['album']['name']
-            
             return f"En cours d'écoute : {artist} - {title} (Album : {album})"
         else:
             return "Aucune piste en cours de lecture"
-
-    except spotipy.SpotifyException as e:
-        logging.error(f"Erreur Spotify : {str(e)}")
-        return None
     except Exception as e:
-        logging.error(f"Erreur inattendue : {str(e)}")
+        logging.error(f"Erreur lors de la récupération de la piste en cours : {str(e)}")
+        return None
+
+def next_track(sp):
+    try:
+        sp.next_track()
+        return "Piste suivante"
+    except Exception as e:
+        logging.error(f"Erreur lors du passage à la piste suivante : {str(e)}")
+        return None
+
+def previous_track(sp):
+    try:
+        sp.previous_track()
+        return "Piste précédente"
+    except Exception as e:
+        logging.error(f"Erreur lors du passage à la piste précédente : {str(e)}")
+        return None
+
+def pause_playback(sp):
+    try:
+        sp.pause_playback()
+        return "Lecture mise en pause"
+    except Exception as e:
+        logging.error(f"Erreur lors de la mise en pause : {str(e)}")
+        return None
+
+def resume_playback(sp):
+    try:
+        sp.start_playback()
+        return "Lecture relancée"
+    except Exception as e:
+        logging.error(f"Erreur lors de la reprise de la lecture : {str(e)}")
         return None
 
 if __name__ == "__main__":
-    result = get_current_track()
+    parser = argparse.ArgumentParser(description="Contrôle de Spotify")
+    parser.add_argument('--next', action='store_true', help='Passer à la piste suivante')
+    parser.add_argument('--previous', action='store_true', help='Revenir à la piste précédente')
+    parser.add_argument('--pause', action='store_true', help='Mettre en pause la lecture')
+    parser.add_argument('--play', action='store_true', help='Relancer la lecture')
+    args = parser.parse_args()
+
+    sp = get_spotify_client()
+    if sp is None:
+        sys.exit(1)
+
+    result = None
+    if args.next:
+        result = next_track(sp)
+    elif args.previous:
+        result = previous_track(sp)
+    elif args.pause:
+        result = pause_playback(sp)
+    elif args.play:
+        result = resume_playback(sp)
+    else:
+        result = get_current_track(sp)
+
     if result:
         print(result)
     else:
-        sys.exit(1)  # Quitte le script avec un code d'erreur
+        sys.exit(1)

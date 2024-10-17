@@ -51,3 +51,18 @@ pipenv run spotify_track
 ```text
 Aucune piste en cours de lecture
 ```
+
+Des options permettent aussi de piloter la lecture
+
+```bash
+usage: spotify_track [-h] [--next] [--previous] [--pause] [--play]
+
+Contrôle de Spotify
+
+options:
+  -h, --help  show this help message and exit
+  --next      Passer à la piste suivante
+  --previous  Revenir à la piste précédente
+  --pause     Mettre en pause la lecture
+  --play      Relancer la lecture
+```
