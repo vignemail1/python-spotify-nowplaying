@@ -79,12 +79,12 @@ def resume_playback(sp):
         return None
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Contrôle de Spotify")
+    parser = argparse.ArgumentParser(description="Contrôle de Spotify", epilog='⭐️ : compte premium nécessaire')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--next', action='store_true', help='Passer à la piste suivante')
-    group.add_argument('--previous', action='store_true', help='Revenir à la piste précédente')
-    group.add_argument('--pause', action='store_true', help='Mettre en pause la lecture')
-    group.add_argument('--play', action='store_true', help='Relancer la lecture')
+    group.add_argument('--next', action='store_true', help='(⭐️) Passer à la piste suivante')
+    group.add_argument('--previous', action='store_true', help='(⭐️) Revenir à la piste précédente')
+    group.add_argument('--pause', action='store_true', help='(⭐️) Mettre en pause la lecture')
+    group.add_argument('--play', action='store_true', help='(⭐️) Relancer la lecture')
     args = parser.parse_args()
 
     sp = get_spotify_client()
