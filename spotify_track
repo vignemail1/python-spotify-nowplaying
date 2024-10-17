@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import sys
+import logging
+from datetime import datetime
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+from dotenv import load_dotenv
+
+# Configuration du logging
+log_file = os.path.join(os.path.dirname(__file__), 'spotify_track.log')
+logging.basicConfig(
+    filename=log_file,
+    level=logging.ERROR,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+def get_current_track():
+    try:
+        # Chargement des variables d'environnement depuis env.txt
+        load_dotenv(dotenv_path='env.txt')
+
+        # Configuration de l'authentification Spotify
+        sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+            redirect_uri="http://localhost:8888/callback",
+            scope="user-read-currently-playing"
+        ))
+
+        # Récupération des informations sur la piste en cours
+        current_track = sp.current_user_playing_track()
+        if current_track is not None and current_track['is_playing']:
+            artist = current_track['item']['artists'][0]['name']
+            title = current_track['item']['name']
+            album = current_track['item']['album']['name']
+            
+            return f"En cours d'écoute : {artist} - {title} (Album : {album})"
+        else:
+            return "Aucune piste en cours de lecture"
+
+    except spotipy.SpotifyException as e:
+        logging.error(f"Erreur Spotify : {str(e)}")
+        return None
+    except Exception as e:
+        logging.error(f"Erreur inattendue : {str(e)}")
+        return None
+
+if __name__ == "__main__":
+    result = get_current_track()
+    if result:
+        print(result)
+    else:
+        sys.exit(1)  # Quitte le script avec un code d'erreur
